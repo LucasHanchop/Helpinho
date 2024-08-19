@@ -1,0 +1,71 @@
+# "org" ensures this Service is used with the correct Serverless Framework License Key.
+org: lucasbelmont
+# "service" is the name of this project. This will also be added to your AWS resource names.
+service: helpinho-backend
+
+
+custom:
+  tableName: "users-table-${sls:stage}"
+  tableName2: "helpinho-table-${sls:stage}"
+  
+build:
+  esbuild:
+    # Enable or Disable bundling the function code and dependencies. (Default: true)
+    bundle: true
+    # Enable minifying function code. (Default: false)
+    minify: false
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  stage: ${opt:stage, 'dev'}
+  memorySize: 512
+  iam:
+    role:
+      statements:
+        - Effect: 'Allow'
+          Action:
+            - dynamodb:Query
+            - dynamodb:Scan
+            - dynamodb:GetItem
+            - dynamodb:PutItem
+            - dynamodb:UpdateItem
+            - dynamodb:DeleteItem
+          Resource: 
+             arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/${self:custom.tableName}
+  environment:
+    USERS_TABLE: ${self:custom.tableName}
+    HELPINHO_TABLE: ${self:custom.tableName2}
+       
+functions:
+  api:
+    handler: services.handler
+    events:
+      - httpApi: "*"
+
+
+resources:
+  Resources:
+    UsersTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        AttributeDefinitions:
+          - AttributeName: userId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: userId
+            KeyType: HASH
+        BillingMode: PAY_PER_REQUEST
+        TableName: ${self:custom.tableName}
+    HelpinhoTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        AttributeDefinitions:
+          - AttributeName: helpinhoId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: helpinhoId
+            KeyType: HASH
+        BillingMode: PAY_PER_REQUEST
+        TableName: ${self:custom.tableName2}
+    
